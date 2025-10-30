@@ -619,6 +619,26 @@ export default function CustomerStore() {
     }
   };
 
+  // Check if store is open on a specific date (without time)
+  const isDateAvailableForReservation = (date: Date) => {
+    if (!storeId) return false;
+
+    const formattedDate = format(date, "yyyy-MM-dd");
+    const dayOfWeek = getDay(date); // 0 for Sunday, 6 for Saturday
+
+    // Check for special day override first
+    const specialDay = specialDays.find(sd => sd.date === formattedDate);
+
+    if (specialDay) {
+      return specialDay.is_open; // Use special day setting
+    }
+
+    // If no special day, check regular operating hours
+    const regularHours = operatingHours.find(oh => oh.day_of_week === dayOfWeek);
+
+    return regularHours?.is_open ?? false;
+  };
+
   const isStoreOpen = (date: Date, time: string | null) => {
     if (!storeId) return false;
 
@@ -1540,7 +1560,14 @@ export default function CustomerStore() {
                                     mode="single"
                                     selected={reservationDate}
                                     onSelect={setReservationDate}
-                                    disabled={(date) => date < new Date() || date > addDays(new Date(), 21)}
+                                    disabled={(date) => {
+                                      // Desabilita datas no passado
+                                      if (date < new Date()) return true;
+                                      // Desabilita datas além de 1 mês (30 dias)
+                                      if (date > addDays(new Date(), 30)) return true;
+                                      // Desabilita datas em que a loja está fechada
+                                      return !isDateAvailableForReservation(date);
+                                    }}
                                     initialFocus
                                     locale={ptBR}
                                     className="pointer-events-auto"
@@ -1548,7 +1575,7 @@ export default function CustomerStore() {
                                 </PopoverContent>
                               </Popover>
                               <p className="text-xs text-muted-foreground">
-                                Até 3 semanas à frente
+                                Até 1 mês à frente. Apenas dias em que a loja está aberta.
                               </p>
                             </div>
                           )}
