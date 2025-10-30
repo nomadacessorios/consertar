@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { 
   Settings as SettingsIcon, 
@@ -52,6 +53,15 @@ interface StoreSpecialDay {
   is_open: boolean;
   open_time: string | null; // HH:mm
   close_time: string | null; // HH:mm
+}
+
+interface OrderStatusConfig {
+  id: string;
+  store_id: string;
+  status_key: string;
+  status_label: string;
+  is_active: boolean;
+  display_order: number;
 }
 
 const daysOfWeek = [
@@ -113,12 +123,16 @@ export default function Settings() {
   const [specialDayOpenTime, setSpecialDayOpenTime] = useState<string | null>(null);
   const [specialDayCloseTime, setSpecialDayCloseTime] = useState<string | null>(null);
   const [editingSpecialDay, setEditingSpecialDay] = useState<StoreSpecialDay | null>(null);
+  const [orderStatusConfigs, setOrderStatusConfigs] = useState<OrderStatusConfig[]>([]);
+  const [editingStatusLabel, setEditingStatusLabel] = useState<string | null>(null);
+  const [tempStatusLabel, setTempStatusLabel] = useState("");
 
   useEffect(() => {
     if (profile?.store_id) {
       loadStoreSettings();
       loadOperatingHours();
       loadSpecialDays();
+      loadOrderStatusConfigs();
     }
   }, [profile]);
 
@@ -326,6 +340,99 @@ export default function Settings() {
     }
   };
 
+  const loadOrderStatusConfigs = async () => {
+    if (!profile?.store_id) return;
+
+    const { data, error } = await supabase
+      .from("order_status_config")
+      .select("*")
+      .eq("store_id", profile.store_id)
+      .order("display_order");
+
+    if (error) {
+      console.error("Erro ao carregar configurações de status:", error);
+      // Se a tabela não existir ainda, cria os defaults
+      if (error.code === "42P01") {
+        await initializeDefaultStatusConfigs();
+      }
+    } else {
+      setOrderStatusConfigs(data || []);
+    }
+  };
+
+  const initializeDefaultStatusConfigs = async () => {
+    if (!profile?.store_id) return;
+
+    const defaults = [
+      { status_key: "pending", status_label: "Pendente", is_active: true, display_order: 1 },
+      { status_key: "preparing", status_label: "Em Preparo", is_active: true, display_order: 2 },
+      { status_key: "ready", status_label: "Pronto", is_active: true, display_order: 3 },
+      { status_key: "delivered", status_label: "Entregue", is_active: true, display_order: 4 },
+      { status_key: "cancelled", status_label: "Cancelado", is_active: true, display_order: 5 },
+    ];
+
+    const { error } = await supabase
+      .from("order_status_config")
+      .insert(defaults.map(d => ({ ...d, store_id: profile.store_id })));
+
+    if (!error) {
+      loadOrderStatusConfigs();
+    }
+  };
+
+  const handleToggleStatusActive = async (statusId: string, isActive: boolean) => {
+    const { error } = await supabase
+      .from("order_status_config")
+      .update({ is_active: isActive })
+      .eq("id", statusId);
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao atualizar status",
+        description: error.message,
+      });
+    } else {
+      toast({
+        title: "Status atualizado!",
+        description: `Status ${isActive ? "ativado" : "desativado"} com sucesso.`,
+      });
+      loadOrderStatusConfigs();
+    }
+  };
+
+  const handleUpdateStatusLabel = async (statusId: string, newLabel: string) => {
+    if (!newLabel.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "O nome do status não pode estar vazio.",
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from("order_status_config")
+      .update({ status_label: newLabel })
+      .eq("id", statusId);
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao renomear status",
+        description: error.message,
+      });
+    } else {
+      toast({
+        title: "Status renomeado!",
+        description: "O nome do status foi atualizado com sucesso.",
+      });
+      setEditingStatusLabel(null);
+      setTempStatusLabel("");
+      loadOrderStatusConfigs();
+    }
+  };
+
   const openAddSpecialDayDialog = () => {
     setEditingSpecialDay(null);
     setSelectedSpecialDate(undefined);
@@ -494,6 +601,95 @@ export default function Settings() {
             <Button onClick={handleSaveDeliverySettings} className="w-full shadow-soft">
               Salvar Configurações de Entrega
             </Button>
+
+            <Separator className="my-6" />
+
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold">Status de Pedidos</h3>
+              <p className="text-sm text-muted-foreground">
+                Personalize os status exibidos no painel de pedidos. Desative status desnecessários para simplificar o fluxo.
+              </p>
+
+              {orderStatusConfigs.map((status) => (
+                <div key={status.id} className="flex items-center justify-between p-3 bg-accent rounded-lg">
+                  <div className="flex items-center gap-3 flex-1">
+                    <Switch
+                      checked={status.is_active}
+                      onCheckedChange={(checked) => handleToggleStatusActive(status.id, checked)}
+                      disabled={status.status_key === "pending" || status.status_key === "cancelled"}
+                    />
+                    
+                    {editingStatusLabel === status.id ? (
+                      <div className="flex items-center gap-2 flex-1">
+                        <Input
+                          value={tempStatusLabel}
+                          onChange={(e) => setTempStatusLabel(e.target.value)}
+                          className="h-8"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              handleUpdateStatusLabel(status.id, tempStatusLabel);
+                            } else if (e.key === "Escape") {
+                              setEditingStatusLabel(null);
+                              setTempStatusLabel("");
+                            }
+                          }}
+                        />
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleUpdateStatusLabel(status.id, tempStatusLabel)}
+                        >
+                          Salvar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setEditingStatusLabel(null);
+                            setTempStatusLabel("");
+                          }}
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 flex-1">
+                        <span className={cn("font-medium", !status.is_active && "text-muted-foreground line-through")}>
+                          {status.status_label}
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0"
+                          onClick={() => {
+                            setEditingStatusLabel(status.id);
+                            setTempStatusLabel(status.status_label);
+                          }}
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  <Badge variant={status.is_active ? "default" : "secondary"} className="ml-2">
+                    {status.is_active ? "Ativo" : "Inativo"}
+                  </Badge>
+                </div>
+              ))}
+
+              {orderStatusConfigs.length === 0 && (
+                <p className="text-center text-muted-foreground py-4">
+                  Nenhuma configuração de status encontrada.
+                </p>
+              )}
+
+              <p className="text-xs text-muted-foreground">
+                💡 Dica: Status desativados serão pulados automaticamente no painel de pedidos.
+                Por exemplo, desativar "Em Preparo" fará os pedidos irem direto de "Pendente" para "Pronto".
+              </p>
+            </div>
           </CardContent>
         </Card>
 
