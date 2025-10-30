@@ -81,6 +81,19 @@ const normalizeTimeFormat = (time: string | null): string | null => {
   return time;
 };
 
+// Helper function to validate that close time is after open time
+const isCloseTimeValid = (openTime: string | null, closeTime: string | null): boolean => {
+  if (!openTime || !closeTime) return true; // If either is null, skip validation
+  
+  const [openHour, openMin] = openTime.split(':').map(Number);
+  const [closeHour, closeMin] = closeTime.split(':').map(Number);
+  
+  const openMinutes = openHour * 60 + openMin;
+  const closeMinutes = closeHour * 60 + closeMin;
+  
+  return closeMinutes > openMinutes;
+};
+
 export default function Settings() {
   const { user, profile, isAdmin } = useAuth();
   const { toast } = useToast();
@@ -234,6 +247,23 @@ export default function Settings() {
       return;
     }
 
+    // Validar horários antes de salvar
+    for (const hour of operatingHours) {
+      if (hour.is_open) {
+        const openTime = hour.open_time || "08:00";
+        const closeTime = hour.close_time || "18:00";
+        
+        if (!isCloseTimeValid(openTime, closeTime)) {
+          toast({
+            variant: "destructive",
+            title: "Horário inválido",
+            description: `${daysOfWeek[hour.day_of_week]}: O horário de fechamento (${closeTime}) deve ser posterior ao horário de abertura (${openTime}).`,
+          });
+          return;
+        }
+      }
+    }
+
     const updates = operatingHours.map(hour => {
       // Prepara os dados para o upsert
       const dataToSave = {
@@ -318,6 +348,21 @@ export default function Settings() {
     if (!profile?.store_id || !selectedSpecialDate) {
       toast({ variant: "destructive", title: "Erro", description: "Selecione uma data válida." });
       return;
+    }
+
+    // Validar horários se o dia estiver aberto
+    if (specialDayIsOpen) {
+      const openTime = specialDayOpenTime || "08:00";
+      const closeTime = specialDayCloseTime || "18:00";
+      
+      if (!isCloseTimeValid(openTime, closeTime)) {
+        toast({
+          variant: "destructive",
+          title: "Horário inválido",
+          description: `O horário de fechamento (${closeTime}) deve ser posterior ao horário de abertura (${openTime}).`,
+        });
+        return;
+      }
     }
 
     const formattedDate = format(selectedSpecialDate, "yyyy-MM-dd");
@@ -464,48 +509,55 @@ export default function Settings() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {operatingHours.map((hour, index) => (
-              <div key={hour.day_of_week} className="flex items-center justify-between gap-4 p-3 bg-accent rounded-lg">
-                <Label htmlFor={`day-${hour.day_of_week}`} className="flex-1 font-medium">
-                  {daysOfWeek[hour.day_of_week]}
-                </Label>
-                <Switch
-                  id={`day-${hour.day_of_week}`}
-                  checked={hour.is_open}
-                  onCheckedChange={(checked) => handleOperatingHourChange(index, "is_open", checked)}
-                />
-                {hour.is_open && (
-                  <>
-                    <Select
-                      value={hour.open_time || ""}
-                      onValueChange={(value) => handleOperatingHourChange(index, "open_time", value)}
-                    >
-                      <SelectTrigger className="w-[100px]">
-                        <SelectValue placeholder="Abre" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {timeOptions.map(time => (
-                          <SelectItem key={time} value={time}>{time}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select
-                      value={hour.close_time || ""}
-                      onValueChange={(value) => handleOperatingHourChange(index, "close_time", value)}
-                    >
-                      <SelectTrigger className="w-[100px]">
-                        <SelectValue placeholder="Fecha" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {timeOptions.map(time => (
-                          <SelectItem key={time} value={time}>{time}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </>
-                )}
-              </div>
-            ))}
+            {operatingHours.map((hour, index) => {
+              const hasInvalidTime = hour.is_open && hour.open_time && hour.close_time && !isCloseTimeValid(hour.open_time, hour.close_time);
+              
+              return (
+                <div key={hour.day_of_week} className={cn("flex items-center justify-between gap-4 p-3 rounded-lg", hasInvalidTime ? "bg-red-50 dark:bg-red-950" : "bg-accent")}>
+                  <Label htmlFor={`day-${hour.day_of_week}`} className="flex-1 font-medium">
+                    {daysOfWeek[hour.day_of_week]}
+                  </Label>
+                  <Switch
+                    id={`day-${hour.day_of_week}`}
+                    checked={hour.is_open}
+                    onCheckedChange={(checked) => handleOperatingHourChange(index, "is_open", checked)}
+                  />
+                  {hour.is_open && (
+                    <>
+                      <Select
+                        value={hour.open_time || ""}
+                        onValueChange={(value) => handleOperatingHourChange(index, "open_time", value)}
+                      >
+                        <SelectTrigger className={cn("w-[100px]", hasInvalidTime && "border-red-500")}>
+                          <SelectValue placeholder="Abre" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {timeOptions.map(time => (
+                            <SelectItem key={time} value={time}>{time}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select
+                        value={hour.close_time || ""}
+                        onValueChange={(value) => handleOperatingHourChange(index, "close_time", value)}
+                      >
+                        <SelectTrigger className={cn("w-[100px]", hasInvalidTime && "border-red-500")}>
+                          <SelectValue placeholder="Fecha" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {timeOptions.map(time => (
+                            <SelectItem key={time} value={time}>{time}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {hasInvalidTime && (
+                        <span className="text-xs text-red-600 dark:text-red-400">⚠️</span>
+                      )}
+                    </>
+                  )}
+                </div>
+              );
+            })}
             <Button onClick={handleSaveOperatingHours} className="w-full shadow-soft">
               Salvar Horários Semanais
             </Button>
