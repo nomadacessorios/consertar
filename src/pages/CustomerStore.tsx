@@ -1563,8 +1563,8 @@ export default function CustomerStore() {
                                     disabled={(date) => {
                                       // Desabilita datas no passado
                                       if (date < new Date()) return true;
-                                      // Desabilita datas além de 3 semanas
-                                      if (date > addDays(new Date(), 21)) return true;
+                                      // Desabilita datas além de 1 mês (30 dias)
+                                      if (date > addDays(new Date(), 30)) return true;
                                       // Desabilita datas em que a loja está fechada
                                       return !isDateAvailableForReservation(date);
                                     }}
@@ -1575,7 +1575,7 @@ export default function CustomerStore() {
                                 </PopoverContent>
                               </Popover>
                               <p className="text-xs text-muted-foreground">
-                                Até 3 semanas à frente. Apenas dias em que a loja está aberta.
+                                Até 1 mês à frente. Apenas dias em que a loja está aberta.
                               </p>
                             </div>
                           )}
