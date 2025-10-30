@@ -1,0 +1,130 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Sistema de gestão para restaurante - Design System */
+
+@layer base {
+  :root {
+    /* Paleta principal - tons quentes para restaurante */
+    --background: 0 0% 98%;
+    --foreground: 20 14.3% 4.1%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 20 14.3% 4.1%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 20 14.3% 4.1%;
+
+    /* Laranja principal para ações importantes */
+    --primary: 24 80% 58%;
+    --primary-foreground: 0 0% 98%;
+    --primary-hover: 24 80% 52%;
+
+    /* Verde para sucesso e status "pronto" */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 98%;
+    --success-light: 142 76% 96%;
+
+    /* Amarelo para "em preparo" */
+    --warning: 45 93% 58%;
+    --warning-foreground: 20 14.3% 4.1%;
+    --warning-light: 45 93% 96%;
+
+    /* Tons neutros modernos */
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 20 14.3% 4.1%;
+
+    --muted: 60 4.8% 95.9%;
+    --muted-foreground: 25 5.3% 44.7%;
+
+    --accent: 60 4.8% 95.9%;
+    --accent-foreground: 24 9.8% 10%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 20 5.9% 90%;
+    --input: 20 5.9% 90%;
+    --ring: 24 80% 58%;
+
+    --radius: 0.75rem;
+
+    /* Gradientes para elementos especiais */
+    --gradient-primary: linear-gradient(135deg, hsl(24 80% 58%), hsl(24 80% 52%));
+    --gradient-success: linear-gradient(135deg, hsl(142 76% 36%), hsl(142 76% 30%));
+    --gradient-hero: linear-gradient(135deg, hsl(24 80% 58%), hsl(20 80% 50%));
+
+    /* Sombras elegantes */
+    --shadow-soft: 0 2px 10px -2px hsl(24 80% 58% / 0.1);
+    --shadow-medium: 0 8px 30px -8px hsl(24 80% 58% / 0.2);
+    --shadow-strong: 0 20px 40px -12px hsl(24 80% 58% / 0.25);
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    /* Transições suaves */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-fast: all 0.15s ease-out;
+  }
+
+  .dark {
+    --background: 20 14.3% 4.1%;
+    --foreground: 0 0% 98%;
+
+    --card: 20 14.3% 4.1%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 20 14.3% 4.1%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 24 80% 58%;
+    --primary-foreground: 0 0% 98%;
+    --primary-hover: 24 80% 52%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 98%;
+    --success-light: 142 76% 8%;
+
+    --warning: 45 93% 58%;
+    --warning-foreground: 20 14.3% 4.1%;
+    --warning-light: 45 93% 8%;
+
+    --secondary: 24 9.8% 10%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 15 7% 9%;
+    --muted-foreground: 24 5.4% 63.9%;
+
+    --accent: 15 7% 9%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 24 9.8% 10%;
+    --input: 24 9.8% 10%;
+    --ring: 24 80% 58%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
