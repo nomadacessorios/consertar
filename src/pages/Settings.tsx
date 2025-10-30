@@ -71,6 +71,16 @@ const generateTimeOptions = () => {
 
 const timeOptions = generateTimeOptions();
 
+// Helper function to normalize time format from HH:MM:SS to HH:MM
+const normalizeTimeFormat = (time: string | null): string | null => {
+  if (!time) return null;
+  // If time is in HH:MM:SS format, convert to HH:MM
+  if (time.length === 8 && time.split(':').length === 3) {
+    return time.substring(0, 5);
+  }
+  return time;
+};
+
 export default function Settings() {
   const { user, profile, isAdmin } = useAuth();
   const { toast } = useToast();
@@ -150,11 +160,14 @@ export default function Settings() {
     const fullHours = daysOfWeek.map((_, index) => {
       const existing = fetchedHours.find(h => h.day_of_week === index);
       if (existing) {
-        // Se existe, mas is_open é true e os horários são null, defina valores padrão
+        // Normalize time format and set defaults if needed
+        const normalizedOpenTime = normalizeTimeFormat(existing.open_time);
+        const normalizedCloseTime = normalizeTimeFormat(existing.close_time);
+        
         return {
           ...existing,
-          open_time: existing.is_open && !existing.open_time ? "08:00" : existing.open_time,
-          close_time: existing.is_open && !existing.close_time ? "18:00" : existing.close_time,
+          open_time: existing.is_open && !normalizedOpenTime ? "08:00" : normalizedOpenTime,
+          close_time: existing.is_open && !normalizedCloseTime ? "18:00" : normalizedCloseTime,
         };
       }
       return {
@@ -296,8 +309,8 @@ export default function Settings() {
     setEditingSpecialDay(day);
     setSelectedSpecialDate(parseISO(day.date));
     setSpecialDayIsOpen(day.is_open);
-    setSpecialDayOpenTime(day.open_time);
-    setSpecialDayCloseTime(day.close_time);
+    setSpecialDayOpenTime(normalizeTimeFormat(day.open_time));
+    setSpecialDayCloseTime(normalizeTimeFormat(day.close_time));
     setShowSpecialDayDialog(true);
   };
 
@@ -522,7 +535,7 @@ export default function Settings() {
                     <div>
                       <p className="font-medium">{format(parseISO(day.date), "dd/MM/yyyy", { locale: ptBR })}</p>
                       <p className="text-sm text-muted-foreground">
-                        {day.is_open ? `Aberto das ${day.open_time} às ${day.close_time}` : "Fechado"}
+                        {day.is_open ? `Aberto das ${normalizeTimeFormat(day.open_time)} às ${normalizeTimeFormat(day.close_time)}` : "Fechado"}
                       </p>
                     </div>
                     <div className="flex gap-2">
