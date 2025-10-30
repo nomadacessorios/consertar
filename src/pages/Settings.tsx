@@ -149,7 +149,15 @@ export default function Settings() {
     // Ensure all 7 days are present, initialize if missing
     const fullHours = daysOfWeek.map((_, index) => {
       const existing = fetchedHours.find(h => h.day_of_week === index);
-      return existing || {
+      if (existing) {
+        // Se existe, mas is_open é true e os horários são null, defina valores padrão
+        return {
+          ...existing,
+          open_time: existing.is_open && !existing.open_time ? "08:00" : existing.open_time,
+          close_time: existing.is_open && !existing.close_time ? "18:00" : existing.close_time,
+        };
+      }
+      return {
         id: `new-${index}`, // Temporary ID for new entries
         store_id: profile.store_id,
         day_of_week: index,
@@ -192,9 +200,9 @@ export default function Settings() {
           updatedHour.open_time = null;
           updatedHour.close_time = null;
         } else { // value is true
-          // Set default times if they are currently null
-          if (updatedHour.open_time === null) updatedHour.open_time = "08:00";
-          if (updatedHour.close_time === null) updatedHour.close_time = "18:00";
+          // Set default times if they are currently null or empty
+          if (!updatedHour.open_time) updatedHour.open_time = "08:00";
+          if (!updatedHour.close_time) updatedHour.close_time = "18:00";
         }
       }
       
@@ -219,8 +227,9 @@ export default function Settings() {
         store_id: profile.store_id,
         day_of_week: hour.day_of_week,
         is_open: hour.is_open,
-        open_time: hour.is_open ? hour.open_time : null,
-        close_time: hour.is_open ? hour.close_time : null,
+        // Garante que se is_open for true, sempre tenha horários válidos
+        open_time: hour.is_open ? (hour.open_time || "08:00") : null,
+        close_time: hour.is_open ? (hour.close_time || "18:00") : null,
       };
 
       // Se o ID for um UUID real, inclua-o para garantir a atualização

@@ -11,6 +11,7 @@ export default defineConfig(({ mode }) => ({
     hmr: {
       clientPort: 3002,
     },
+    allowedHosts: [".amazonaws.com", "localhost", "chat-preview"],
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
